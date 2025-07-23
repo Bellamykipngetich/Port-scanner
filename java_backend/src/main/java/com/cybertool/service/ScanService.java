@@ -15,7 +15,7 @@ public class ScanService {
         List<Integer> openPorts = new ArrayList<>();
         
         // Execute C++ scanner
-        ProcessBuilder pb = new ProcessBuilder("./scanner", host, 
+        ProcessBuilder pb = new ProcessBuilder("../c++_scanner/build/scanner", host, 
                                              String.valueOf(startPort), 
                                              String.valueOf(endPort));
         pb.redirectErrorStream(true);
