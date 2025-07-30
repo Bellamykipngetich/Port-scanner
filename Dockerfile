@@ -10,15 +10,12 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory and copy C++ code
+# Set working directory and copy source code
 WORKDIR /app/cpp_scanner
 COPY c++_scanner/ .
 
-# Create build directory and compile
-RUN mkdir build && \
-    cd build && \
-    cmake .. && \
-    make
+# Build the C++ scanner
+RUN mkdir -p build && cd build && cmake .. && make
 
 # =========================
 # Stage 2: Build Java Backend
@@ -27,14 +24,14 @@ FROM maven:3.9.6-eclipse-temurin-21 AS java-builder
 
 WORKDIR /app/java_backend
 
-# Copy Maven config and download dependencies first (better caching)
+# Cache dependencies
 COPY java_backend/pom.xml .
 RUN mvn dependency:go-offline
 
-# Copy actual source code
+# Copy source
 COPY java_backend/src ./src
 
-# Build the JAR
+# Build the Spring Boot JAR
 RUN mvn clean package -DskipTests
 
 # =========================
@@ -44,15 +41,15 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-# Copy backend JAR and C++ binary
+# Copy JAR and C++ binary from previous stages
 COPY --from=java-builder /app/java_backend/target/cyber-backend-1.0-SNAPSHOT.jar .
 COPY --from=cpp-builder /app/cpp_scanner/build/scanner ./scanner
 
-# Make sure the scanner is executable
+# Make C++ binary executable
 RUN chmod +x ./scanner
 
-# Expose backend port
+# Expose application port for Render
 EXPOSE 8080
 
-# Start the Spring Boot application
+# Start the Spring Boot server
 CMD ["java", "-jar", "cyber-backend-1.0-SNAPSHOT.jar"]
