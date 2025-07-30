@@ -1,3 +1,0 @@
-/home/tr47/Port-scanner/c++_scanner/build/CMakeFiles/scanner.dir
-/home/tr47/Port-scanner/c++_scanner/build/CMakeFiles/edit_cache.dir
-/home/tr47/Port-scanner/c++_scanner/build/CMakeFiles/rebuild_cache.dir
