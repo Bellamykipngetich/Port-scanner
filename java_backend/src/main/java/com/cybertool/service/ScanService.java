@@ -5,35 +5,44 @@ import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 public class ScanService {
 
-    public ScanResult scanHost(String host, int startPort, int endPort) throws Exception {
-        List<Integer> openPorts = new ArrayList<>();
-        
-        // Execute C++ scanner
-        ProcessBuilder pb = new ProcessBuilder("../c++_scanner/build/scanner", host, 
-                                             String.valueOf(startPort), 
-                                             String.valueOf(endPort));
-        pb.redirectErrorStream(true);
-        Process process = pb.start();
-        
-        // Read output
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            if (line.startsWith("Port ") && line.endsWith(" is open")) {
-                try {
-                    int port = Integer.parseInt(line.split(" ")[1]);
-                    openPorts.add(port);
-                } catch (NumberFormatException ignored) {}
+    public ScanResult scanHost(String host, int startPort, int endPort) {
+        StringBuilder output = new StringBuilder();
+        int exitCode;
+
+        try {
+            // Absolute path to the scanner binary (placed by Dockerfile)
+            ProcessBuilder pb = new ProcessBuilder("/app/scanner",
+                    host,
+                    String.valueOf(startPort),
+                    String.valueOf(endPort));
+            pb.redirectErrorStream(true); // Merge stderr into stdout
+
+            Process process = pb.start();
+
+            // Read scanner output
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
             }
+
+            exitCode = process.waitFor();
+            if (exitCode != 0) {
+                return new ScanResult("Scanner failed with code " + exitCode);
+            }
+
+            // Return result wrapped in your ScanResult model
+            return new ScanResult(output.toString());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ScanResult("Error running scanner: " + e.getMessage());
         }
-        process.waitFor();
-        
-        return new ScanResult(host, openPorts);
     }
 }
