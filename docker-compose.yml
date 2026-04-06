@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  cybertool:
+    build: .
+    container_name: cybertool-scanner
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    environment:
+      - JAVA_OPTS=-XX:MaxRAMPercentage=75.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

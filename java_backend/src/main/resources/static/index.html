@@ -2,23 +2,209 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CyberTool</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBERTOOL // TACTICAL PORT SCANNER</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F6E1;</text></svg>">
 </head>
 <body>
-    <canvas id="backgroundCanvas"></canvas>
-    <div class="container">
-        <img src="/images/logo.png" alt="CyberTool Logo" class="logo">
-        <h1>Network Vulnerability Scanner</h1>
-        <form id="scanForm">
-            <input type="text" id="host" placeholder="Enter host (e.g., example.com)" required>
-            <input type="number" id="startPort" placeholder="Start Port (1-65535)" min="1" max="65535" required>
-            <input type="number" id="endPort" placeholder="End Port (1-65535)" min="1" max="65535" required>
-            <button type="submit">Scan</button>
-        </form>
-        <div id="results"></div>
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- HUD Overlay Lines -->
+    <div class="hud-overlay">
+        <div class="hud-corner hud-tl"></div>
+        <div class="hud-corner hud-tr"></div>
+        <div class="hud-corner hud-bl"></div>
+        <div class="hud-corner hud-br"></div>
     </div>
+
+    <!-- Top Status Bar -->
+    <header class="status-bar">
+        <div class="status-left">
+            <span class="sys-indicator active"></span>
+            <span class="sys-label">SYS::ONLINE</span>
+            <span class="divider">|</span>
+            <span class="sys-label" id="clockDisplay">--:--:--</span>
+        </div>
+        <div class="status-center">
+            <span class="brand-text">CYBERTOOL</span>
+            <span class="brand-sub">TACTICAL NETWORK RECONNAISSANCE</span>
+        </div>
+        <div class="status-right">
+            <span class="sys-label">BUILD v3.0.0</span>
+            <span class="divider">|</span>
+            <span class="sys-label" id="scanCount">SCANS: 0</span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-grid">
+
+        <!-- Left Panel: Scanner Controls -->
+        <section class="panel panel-controls">
+            <div class="panel-header">
+                <span class="panel-icon">&gt;_</span>
+                <span class="panel-title">SCAN CONFIGURATION</span>
+                <span class="panel-status" id="scanStatus">STANDBY</span>
+            </div>
+            <div class="panel-body">
+                <form id="scanForm" autocomplete="off">
+                    <div class="field-group">
+                        <label class="field-label">TARGET HOST</label>
+                        <div class="input-wrapper">
+                            <span class="input-prefix">$</span>
+                            <input type="text" id="host" placeholder="e.g. scanme.nmap.org or 192.168.1.1" required>
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label class="field-label">START PORT</label>
+                            <div class="input-wrapper">
+                                <span class="input-prefix">#</span>
+                                <input type="number" id="startPort" placeholder="1" min="1" max="65535" value="1" required>
+                            </div>
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label">END PORT</label>
+                            <div class="input-wrapper">
+                                <span class="input-prefix">#</span>
+                                <input type="number" id="endPort" placeholder="1024" min="1" max="65535" value="1024" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Presets -->
+                    <div class="presets">
+                        <span class="field-label">QUICK PRESETS</span>
+                        <div class="preset-buttons">
+                            <button type="button" class="preset-btn" data-start="1" data-end="1024">COMMON</button>
+                            <button type="button" class="preset-btn" data-start="1" data-end="100">TOP-100</button>
+                            <button type="button" class="preset-btn" data-start="80" data-end="443">WEB</button>
+                            <button type="button" class="preset-btn" data-start="3306" data-end="5432">DB</button>
+                            <button type="button" class="preset-btn" data-start="20" data-end="25">FTP/SSH</button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="scan-btn" id="scanBtn">
+                        <span class="btn-icon">&#9654;</span>
+                        <span class="btn-text">INITIATE SCAN</span>
+                    </button>
+                </form>
+
+                <!-- Progress Bar -->
+                <div class="progress-container" id="progressContainer" style="display:none;">
+                    <div class="progress-label">
+                        <span id="progressText">SCANNING...</span>
+                        <span id="progressTimer">0.0s</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Center Panel: Radar Visualization -->
+        <section class="panel panel-radar">
+            <div class="panel-header">
+                <span class="panel-icon">&#9678;</span>
+                <span class="panel-title">NETWORK RADAR</span>
+            </div>
+            <div class="panel-body radar-body">
+                <canvas id="radarCanvas"></canvas>
+                <div class="radar-stats">
+                    <div class="radar-stat">
+                        <span class="stat-value" id="statOpen">0</span>
+                        <span class="stat-label">OPEN</span>
+                    </div>
+                    <div class="radar-stat">
+                        <span class="stat-value" id="statClosed">0</span>
+                        <span class="stat-label">CLOSED</span>
+                    </div>
+                    <div class="radar-stat">
+                        <span class="stat-value" id="statDuration">--</span>
+                        <span class="stat-label">TIME(ms)</span>
+                    </div>
+                    <div class="radar-stat">
+                        <span class="stat-value" id="statTarget">--</span>
+                        <span class="stat-label">TARGET</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Scan Log -->
+        <section class="panel panel-log">
+            <div class="panel-header">
+                <span class="panel-icon">&#9776;</span>
+                <span class="panel-title">OPERATION LOG</span>
+                <button class="log-clear-btn" id="clearLog">CLR</button>
+            </div>
+            <div class="panel-body">
+                <div class="log-output" id="logOutput">
+                    <div class="log-entry log-system">[SYS] CyberTool v3.0.0 initialized</div>
+                    <div class="log-entry log-system">[SYS] Scanner engine: C++17 / Multi-threaded</div>
+                    <div class="log-entry log-system">[SYS] Awaiting target designation...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bottom Panel: Results Table -->
+        <section class="panel panel-results" id="resultsPanel" style="display:none;">
+            <div class="panel-header">
+                <span class="panel-icon">&#9635;</span>
+                <span class="panel-title">SCAN RESULTS</span>
+                <span class="results-count" id="resultsCount">0 PORTS DETECTED</span>
+            </div>
+            <div class="panel-body">
+                <div class="results-table-wrapper">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>PORT</th>
+                                <th>STATE</th>
+                                <th>SERVICE</th>
+                                <th>BANNER</th>
+                                <th>LATENCY</th>
+                                <th>RISK</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Scan History -->
+        <section class="panel panel-history">
+            <div class="panel-header">
+                <span class="panel-icon">&#9201;</span>
+                <span class="panel-title">SCAN HISTORY</span>
+            </div>
+            <div class="panel-body">
+                <div class="history-list" id="historyList">
+                    <div class="history-empty">No previous scans in this session</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Status -->
+    <footer class="footer-bar">
+        <span>ENCRYPTION: AES-256</span>
+        <span>|</span>
+        <span>PROTOCOL: TCP/SYN</span>
+        <span>|</span>
+        <span>ENGINE: MULTI-THREADED</span>
+        <span>|</span>
+        <span id="footerStatus">STATUS: IDLE</span>
+    </footer>
+
     <script src="/js/background.js"></script>
+    <script src="/js/radar.js"></script>
     <script src="/js/script.js"></script>
 </body>
 </html>
